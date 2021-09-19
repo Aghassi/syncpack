@@ -1,13 +1,6 @@
-import { isArrayOfStrings } from 'expect-more';
-import { readFileSync, readJsonSync } from 'fs-extra';
-import { sync } from 'glob';
-import { join, resolve } from 'path';
-import { sync as readYamlFileSync } from 'read-yaml-file';
-import { ALL_PATTERNS } from '../../constants';
-
-interface Options {
-  source: string[];
-}
+import { readFileSync } from 'fs-extra';
+import { SyncpackConfig } from '../../constants';
+import { getPatterns } from './get-patterns';
 
 export interface Source {
   bugs?: { url: string } | string;
@@ -34,50 +27,17 @@ export interface SourceWrapper {
   json: string;
 }
 
-const getPatternsFromJson = (
-  fileName: string,
-  getProperties: (config: any) => Array<string | undefined>,
-): string[] | null => {
-  const filePath = resolve(process.cwd(), fileName);
-  const config = readJsonSync(filePath, { throws: false });
-  if (!config) return null;
-  const packages = getProperties(config).find(isArrayOfStrings);
-  return packages ? [process.cwd()].concat(packages).map((dirPath) => join(dirPath, 'package.json')) : null;
-};
+type Options = Pick<SyncpackConfig, 'source'>;
 
-const getCliPatterns = (program: Options): Options['source'] | null =>
-  isArrayOfStrings(program.source) ? program.source : null;
+export function getWrappers(program: Options): SourceWrapper[] {
+  return getPatterns(program).map(createWrapper);
+}
 
-const getYarnPatterns = (): string[] | null =>
-  getPatternsFromJson('package.json', (config) => [config.workspaces, config.workspaces?.packages]);
-
-const getLernaPatterns = (): string[] | null => getPatternsFromJson('lerna.json', (config) => [config.packages]);
-
-const getPnpmPatterns = (): string[] | null => {
-  try {
-    const filePath = resolve(process.cwd(), 'pnpm-workspace.yaml');
-    const config = readYamlFileSync<{ packages?: string[] }>(filePath);
-    const packages = [config.packages].find(isArrayOfStrings);
-    return packages ? [process.cwd()].concat(packages).map((dirPath) => join(dirPath, 'package.json')) : null;
-  } catch (err) {
-    return null;
-  }
-};
-
-const getDefaultPatterns = (): string[] => ALL_PATTERNS;
-const resolvePattern = (pattern: string): string[] => sync(pattern, { absolute: true });
-const reduceFlatArray = (all: string[], next: string[]): string[] => all.concat(next);
-const createWrapper = (filePath: string): SourceWrapper => {
+function createWrapper(filePath: string): SourceWrapper {
   const json = readFileSync(filePath, { encoding: 'utf8' });
   return {
     contents: JSON.parse(json),
     filePath,
     json,
   };
-};
-
-export const getWrappers = (program: Options): SourceWrapper[] =>
-  (getCliPatterns(program) || getYarnPatterns() || getPnpmPatterns() || getLernaPatterns() || getDefaultPatterns())
-    .map(resolvePattern)
-    .reduce(reduceFlatArray, [])
-    .map(createWrapper);
+}
