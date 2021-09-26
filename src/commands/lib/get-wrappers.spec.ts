@@ -2,6 +2,7 @@ import { removeSync } from 'fs-extra';
 import { getWrappers, SourceWrapper } from './get-wrappers';
 import mock = require('mock-fs');
 import { toJson, withJson } from '../../../test/mock';
+import { CWD } from '../../constants';
 
 describe('getWrappers', () => {
   afterEach(() => {
@@ -28,7 +29,7 @@ describe('getWrappers', () => {
   const getShape = (name: string, filePath: string): SourceWrapper =>
     withJson({
       contents: { name },
-      filePath: `${process.cwd()}/${filePath}`,
+      filePath: `${CWD}/${filePath}`,
     });
 
   it('prefers CLI', () => {
@@ -75,7 +76,7 @@ describe('getWrappers', () => {
       it('should resolve correctly', () => {
         const program = { source: [] };
         expect(getWrappers(program)).toEqual([
-          withJson({ contents: { workspaces: ['as-array/*'] }, filePath: `${process.cwd()}/package.json` }),
+          withJson({ contents: { workspaces: ['as-array/*'] }, filePath: `${CWD}/package.json` }),
           getShape('packages-a', 'as-array/a/package.json'),
           getShape('packages-b', 'as-array/b/package.json'),
         ]);
@@ -96,7 +97,7 @@ describe('getWrappers', () => {
         expect(getWrappers(program)).toEqual([
           withJson({
             contents: { workspaces: { packages: ['as-object/*'] } },
-            filePath: `${process.cwd()}/package.json`,
+            filePath: `${CWD}/package.json`,
           }),
           getShape('packages-a', 'as-object/a/package.json'),
           getShape('packages-b', 'as-object/b/package.json'),
@@ -122,7 +123,7 @@ describe('getWrappers', () => {
     it('should resolve correctly', () => {
       const program = { source: [] };
       expect(getWrappers(program)).toEqual([
-        withJson({ contents: { name: 'root' }, filePath: `${process.cwd()}/package.json` }),
+        withJson({ contents: { name: 'root' }, filePath: `${CWD}/package.json` }),
         getShape('package-a', 'a/package.json'),
         getShape('package-b', 'b/package.json'),
       ]);

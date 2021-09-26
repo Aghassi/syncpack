@@ -3,15 +3,16 @@ import { pipe } from 'fp-ts/lib/function';
 import { filter, map as mapOption, Option } from 'fp-ts/lib/Option';
 import { map as mapTaskEither, TaskEither } from 'fp-ts/TaskEither';
 import { join } from 'path';
+import { CWD } from '../../../constants';
 import { getIn } from './get-in';
 import { readJsonSafe } from './read-json-safe';
 
 /**
  * @param filePath Absolute file path to a lerna.json
  */
-export function getLernaPatterns(filePath: string): TaskEither<Error, Option<string[]>> {
+export function getLernaPatterns(): TaskEither<Error, Option<string[]>> {
   return pipe(
-    readJsonSafe(filePath),
+    readJsonSafe(join(CWD, 'lerna.json')),
     mapTaskEither((lerna) =>
       pipe(
         getIn<string[]>(['packages'], lerna),
@@ -24,7 +25,7 @@ export function getLernaPatterns(filePath: string): TaskEither<Error, Option<str
 }
 
 function addRootDir(patterns: string[]): string[] {
-  return [process.cwd(), ...patterns];
+  return [CWD, ...patterns];
 }
 
 function limitToPackageJson(patterns: string[]): string[] {
